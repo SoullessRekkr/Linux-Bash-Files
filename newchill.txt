@@ -1,0 +1,267 @@
+#!/bin/bash
+
+function help {
+	echo "Wind-Chill Calculator"
+	echo ""
+	echo "Usage: windchill --airtemp=<temp> --velocity=<speed> [-c | --cout] [--cin] [--file=<filename>] [-h | --help] [-q | --quiet] [-v | --version]"
+	echo ""
+	echo "Arguments"
+	echo "     --airtemp=<temp>    The outside air temperature (in Fahrenheit by default)"
+	echo "     --velocity=<speed>  The wind speed"
+	echo "     -c | --cout         Display the wind-chill value in Celsius rather than Fahrenheit (Fahrenheit output is default)"
+	echo "     --cin               The --airtemp value is in Celsius rather than Fahrenheit"
+	echo "     --file=<filename>   Write all output to the specified file rather than the command line"
+	echo "     -h | --help         Display this message"
+	echo "     -q | --quiet        Do not display anything except the answer in the output"
+	echo "     -v | --version      Display the version information"
+	echo ""
+	ec=0
+	echo "# View the exit code"
+	echo $ec
+	exit
+	}
+
+function version {
+	echo "Wind-Chill Calculator"
+	echo ""
+	echo "     Version: 1.0"
+	echo "     Auther: Trinity Zamrzla"
+	echo "     Date: 03/08/2019"
+	echo "     Copyright (C) 2019 by Trinity Zamrzla Enterprises, Inc"
+	echo ""
+	ec=0
+	echo "# View the exit code"
+	echo $ec
+	exit
+	}
+	
+function invalid {
+	echo ""
+	echo "Invalid Arguments"
+	echo ""
+	usage
+	echo ""
+	ec=2
+	echo "# View the exit code"
+	echo $ec
+	exit
+	}
+
+function usage {
+echo -e 'Usage: windchill --airtemp=<temp> --velocity=<speed> [-c | --cout] [--cin] [--file=<filename>] [-h | --help] [-q | --quiet] [-v | --version]'
+echo -e 'Try 'windchill --help' for more information'
+}
+
+function missing {
+	echo ""
+	echo "Missing Filename Argument"
+	echo ""
+	usage
+	echo ""
+	ec=3
+	echo "# View the exit code"
+	echo $ec
+	exit
+}
+rangeCheck() {
+
+	if [ "$1" -lt -58 ] || [ "$1" -gt 41 ]
+		then
+		echo "Outisde Air Temperature ($1) is out of range [-58 to 41]"
+		ec=4
+		echo "$ec # View the exit code"
+		echo $ec
+		exit
+
+	elif [ "$2" -lt 2 ] || [ "$2" -gt 50 ]
+		then
+		echo "Wind Speed ($2) is Out of Range [2 to 50]"
+		ec=4
+		echo "$ec # View the exit code"
+		echo $ec
+		exit
+	fi
+}
+
+### END OF FUNCTIONS ###
+
+input=$(getopt -q -n "$0" -o "chqv" -l "airtemp:,velocity:,cout,cin,file,help,quiet,version" -- "$@")
+if [ $? != 0 ];
+	then
+	echo ""
+	echo "Ilegal Argument(s)";
+	echo ""
+	usage;
+	echo ""
+	ec=1
+	echo "# View the exit code"
+	echo $ec
+	exit
+fi
+
+
+
+eval set -- "$input"
+
+ins="F"
+outs="F"
+Cin=false
+Cout=false
+
+while true; do
+	case "$1" in
+	--airtemp)
+        to=$2
+		shift;
+		shift;
+		continue;;
+
+	--velocity)
+		vel=$2;
+		shift;
+		shift;
+		continue;;
+
+	-c | --cout)
+		if [ $2 = "--cout" ] || [ $2 = "-c" ];
+			then
+				invalid;
+		fi;
+		Cout=true;
+		shift;;
+
+	--cin)
+		Cin=true;
+		shift;;
+
+	--file)
+		if [ -n "$2" ] 
+			then
+				file_name=$2
+		else
+			missing
+		fi
+
+		shift 2;;
+
+	--)
+		shift;
+		break ;;
+
+	-h | --help)
+		if [ ! "$2" = "--" ];
+			then
+				invalid;
+		fi;
+		help;
+		shift;;
+
+	-q | --quiet)
+		if [ "$2" = "--quiet" ];
+			then
+				invalid;
+		fi;
+		Quiet=true;
+		shift;;
+
+	-v | --version)
+		version;;
+	
+	*)
+	usage;
+	break;;
+	esac
+
+done
+
+#Checks for missing arguments
+if [ -z "$to" ]
+		then
+		echo ""
+		echo "Missing Air Temperature Argument"
+		echo ""
+		usage;
+		echo ""
+		ec=3
+		echo "# View the exit code"
+		echo $ec
+		exit
+
+elif [ -z "$vel" ]
+		then
+		echo ""
+		echo "Missing Wind Speed Argument"
+		echo ""
+		usage;
+		echo ""
+		ec=3
+		echo "# View the exit code"
+		echo $ec
+		exit
+
+fi
+
+rangeCheck "$to" "$vel" #Checks if the arguments are within range
+
+wc=$( bc -l <<< "35.74 + (0.6215 * $to) - (35.75 * $(echo "e(0.16*l($vel))" | bc -l)) + 0.4275 * ($to * $(echo "e(0.16*l($vel))" | bc -l))")
+
+if [ "$Cout" = true ] && [ "$Cin" = false ];
+	then
+	outs="C"
+	wc=$( bc -l <<< "($(echo $wc | bc -l) - 32) * 5 / 9")
+fi
+
+if [ "$Cin" = true ] && [ "$Cout" = false ]
+	then
+	ins="C"
+	tC=$(bc -l <<< "$to * 9 / 5 + 32")
+	wc=$( bc -l <<< "35.74 + (0.6215 * $tC) - (35.75 * $(echo "e(0.16*l($vel))" | bc -l)) + 0.4275 * ($tC * $(echo "e(0.16*l($vel))" | bc -l))")
+
+fi
+
+if [ "$Cin" = true ] && [ "$Cout" = true ]
+	then
+	ins="C"
+	tC=$(bc -l <<< "$to * 9 / 5 + 32")
+	wc=$( bc -l <<< "35.74 + (0.6215 * $tC) - (35.75 * $(echo "e(0.16*l($vel))" | bc -l)) + 0.4275 * ($tC * $(echo "e(0.16*l($vel))" | bc -l))")
+	wc=$(bc -l <<< "($wc -32) * 5 / 9")
+fi
+
+if [ "$Quiet" = true ]
+	then
+	if [ -z "$file_name" ]
+		then
+		printf "\n%.3f\n\n" "$wc"
+		ec=0
+		echo "# View the exit code"
+		echo $ec
+		exit
+	else
+		printf "\n%.3f\n\n" "$windChill" > $file_name #Prints output to a file
+		exit 0
+	fi
+fi
+
+if [ ! -z "$file_name" ]
+	then
+		echo "Wind-Chill Calculator"
+		echo ""
+		printf "\nOutSide Air Temperature ($ins): %d\nWind Speed: %d\nWind-Chill ($outs): %.3f\n\n" "$to" "$vel" "$wc" > $file_name
+		ec=0
+		echo "# View the exit code"
+		echo $ec
+		exit
+
+else	
+
+	echo "Wind-Chill Calculator"
+	echo ""
+	echo "Outside Air Temperature ($ins): $to"
+	echo "Wind Speed: $vel"
+	printf "Wind-Chill ($outs): %.3f\n\n" "$wc"
+	ec=0
+	echo "# View the exit code"
+	echo $ec
+	exit
+
+fi
