@@ -1,0 +1,6 @@
+#!/bin/bash
+
+current_date=$(date +"%m-%d-%Y")
+file="n01396736 Backup ($current_date).tgz"
+tar -cvzf "$file" module8
+pscp -pw cop4640password "$file" cop4640user@192.168.100.80:backup/
